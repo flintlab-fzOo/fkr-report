@@ -1,0 +1,47 @@
+{
+  "020400": {
+    "ticker_name": "대동금속",
+    "buy_price": 14650.0,
+    "buy_size": 704,
+    "buy_date": "2023-12-28",
+    "signal_date": "2023-12-28",
+    "phase": 1,
+    "stop_loss": 0,
+    "theme": "로봇,자동차 부품,농업,건설기계,농업 - 기계,농기계,자율주행",
+    "score": 71.8,
+    "peak_price": 14650.0,
+    "current_price": 14650.0,
+    "unrealized_pnl": 0,
+    "unrealized_rtn": 0.0
+  },
+  "052020": {
+    "ticker_name": "에스티큐브",
+    "buy_price": 10936.0,
+    "buy_size": 944,
+    "buy_date": "2023-12-28",
+    "signal_date": "2023-12-28",
+    "phase": 1,
+    "stop_loss": 0,
+    "theme": "항암제,로봇,면역항암제,로봇 - 가정",
+    "score": 71.0,
+    "peak_price": 10936.0,
+    "current_price": 10936.0,
+    "unrealized_pnl": 0,
+    "unrealized_rtn": 0.0
+  },
+  "389470": {
+    "ticker_name": "인벤티지랩",
+    "buy_price": 17400.0,
+    "buy_size": 593,
+    "buy_date": "2023-12-28",
+    "signal_date": "2023-12-28",
+    "phase": 1,
+    "stop_loss": 0,
+    "theme": "제약/바이오,치매,탈모 - 치료제,비만치료제,반려동물,탈모",
+    "score": 67.9,
+    "peak_price": 17400.0,
+    "current_price": 17400.0,
+    "unrealized_pnl": 0,
+    "unrealized_rtn": 0.0
+  }
+}
