@@ -1,1 +1,1620 @@
-init
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Firewall Report</title>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                background: #0d0d0d;
+                color: #f5f5f5;
+                font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+                min-height: 100vh;
+            }
+
+            .container {
+                max-width: 1600px;
+                margin: 0 auto;
+                padding: 32px 24px;
+            }
+
+            /* ── Header ── */
+            .page-header {
+                display: flex;
+                align-items: baseline;
+                gap: 14px;
+                margin-bottom: 32px;
+            }
+            .page-header h1 {
+                font-size: 24px;
+                font-weight: 700;
+                color: #f0b429;
+                letter-spacing: -0.5px;
+            }
+            .page-header .subtitle {
+                font-size: 13px;
+                color: #444;
+            }
+
+            /* ── Search Panel ── */
+            .search-panel {
+                background: #161616;
+                border: 1px solid #222;
+                border-radius: 10px;
+                padding: 22px 24px;
+                margin-bottom: 28px;
+            }
+            .search-row {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .search-label {
+                font-size: 12px;
+                color: #666;
+                white-space: nowrap;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+            .seed-input {
+                width: 180px;
+                background: #0d0d0d;
+                color: #f5f5f5;
+                border: 1px solid #333;
+                padding: 9px 14px;
+                border-radius: 6px;
+                font-size: 15px;
+                font-family: "Consolas", monospace;
+                outline: none;
+                transition: border-color 0.15s;
+            }
+            .seed-input:focus {
+                border-color: #f0b429;
+            }
+            .seed-input::placeholder {
+                color: #3a3a3a;
+                font-family: "Segoe UI", sans-serif;
+                font-size: 12px;
+            }
+
+            .btn {
+                padding: 9px 20px;
+                border-radius: 6px;
+                border: none;
+                cursor: pointer;
+                font-size: 13px;
+                font-weight: 700;
+                font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+                transition: all 0.15s;
+            }
+            .btn-primary {
+                background: #f0b429;
+                color: #0d0d0d;
+            }
+            .btn-primary:hover {
+                background: #f5c84a;
+            }
+            .btn-primary:disabled {
+                background: #3a3a3a;
+                color: #666;
+                cursor: not-allowed;
+            }
+
+            /* ── Year Tabs ── */
+            .year-bar {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 18px;
+            }
+            .year-tab {
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                color: #666;
+                padding: 7px 18px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 700;
+                font-family: "Consolas", monospace;
+                transition: all 0.15s;
+            }
+            .year-tab:hover:not(.unavailable) {
+                border-color: #f0b429;
+                color: #f0b429;
+            }
+            .year-tab.active {
+                background: #2a2a1a;
+                border-color: #f0b429;
+                color: #f0b429;
+            }
+            .year-tab.unavailable {
+                opacity: 0.25;
+                cursor: not-allowed;
+            }
+            /* 범위 마지막 연도: 클릭하면 해제됨을 표시 */
+            .year-tab.range-edge {
+                border-style: dashed;
+            }
+            .year-tab.range-edge:hover {
+                border-color: #e74c3c;
+                color: #e74c3c;
+                background: #3a1a1a;
+            }
+
+            /* ── Status bar ── */
+            .status-bar {
+                margin-top: 12px;
+                font-size: 12px;
+                color: #555;
+                min-height: 20px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .status-bar.ok {
+                color: #2ecc71;
+            }
+            .status-bar.err {
+                color: #e74c3c;
+            }
+
+            /* ── Spinner ── */
+            .spinner {
+                display: inline-block;
+                width: 14px;
+                height: 14px;
+                border: 2px solid #333;
+                border-top-color: #f0b429;
+                border-radius: 50%;
+                animation: spin 0.7s linear infinite;
+                flex-shrink: 0;
+            }
+            @keyframes spin {
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            /* ── Dashboard ── */
+            .hidden {
+                display: none !important;
+            }
+
+            .dash-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 22px;
+            }
+            .dash-title-row {
+                display: flex;
+                align-items: baseline;
+                gap: 12px;
+            }
+            .dash-title {
+                font-size: 18px;
+                font-weight: 700;
+                color: #f5f5f5;
+            }
+            .year-badge {
+                background: #2a2a1a;
+                border: 1px solid #f0b429;
+                color: #f0b429;
+                padding: 3px 12px;
+                border-radius: 4px;
+                font-size: 13px;
+                font-weight: 700;
+                font-family: "Consolas", monospace;
+            }
+            .dash-meta {
+                font-size: 12px;
+                color: #444;
+                font-family: "Consolas", monospace;
+            }
+
+            /* ── Sections ── */
+            .section {
+                margin-bottom: 22px;
+            }
+            .section-title {
+                font-size: 13px;
+                font-weight: 700;
+                color: #f0b429;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #1e1e1e;
+                margin-bottom: 14px;
+            }
+
+            /* ── KPI Grid ── */
+            .kpi-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+            }
+            @media (max-width: 1100px) {
+                .kpi-grid {
+                    grid-template-columns: repeat(2, 1fr);
+                }
+            }
+            @media (max-width: 600px) {
+                .kpi-grid {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            .kpi-card {
+                background: #161616;
+                border: 1px solid #1e1e1e;
+                border-radius: 8px;
+                padding: 16px 20px;
+                position: relative;
+                overflow: hidden;
+            }
+            .kpi-card::after {
+                content: "";
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 2px;
+            }
+            .kpi-card.top-yellow::after {
+                background: #f0b429;
+            }
+            .kpi-card.top-green::after {
+                background: #2ecc71;
+            }
+            .kpi-card.top-red::after {
+                background: #e74c3c;
+            }
+            .kpi-card.top-blue::after {
+                background: #3498db;
+            }
+            .kpi-card.top-purple::after {
+                background: #9b59b6;
+            }
+            .kpi-card.top-teal::after {
+                background: #1abc9c;
+            }
+
+            .kpi-label {
+                font-size: 10px;
+                color: #555;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 10px;
+            }
+            .kpi-value {
+                font-size: 22px;
+                font-weight: 700;
+                font-family: "Consolas", monospace;
+                line-height: 1;
+                margin-bottom: 5px;
+            }
+            .kpi-sub {
+                font-size: 11px;
+                color: #555;
+                font-family: "Consolas", monospace;
+            }
+
+            /* Colors */
+            .pos {
+                color: #2ecc71;
+            }
+            .neg {
+                color: #e74c3c;
+            }
+            .neu {
+                color: #f5f5f5;
+            }
+            .muted {
+                color: #666;
+            }
+
+            /* ── Chart Cards ── */
+            .chart-card {
+                background: #161616;
+                border: 1px solid #1e1e1e;
+                border-radius: 8px;
+                padding: 18px;
+            }
+            .chart-label {
+                font-size: 10px;
+                color: #444;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-bottom: 14px;
+            }
+
+            .charts-row {
+                display: grid;
+                grid-template-columns: 2fr 1fr;
+                gap: 12px;
+            }
+            @media (max-width: 900px) {
+                .charts-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+
+            /* ── Table ── */
+            .table-wrap {
+                border: 1px solid #1e1e1e;
+                border-radius: 8px;
+                overflow: auto;
+                max-height: 520px;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 12px;
+            }
+            thead {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+            }
+            th {
+                background: #1a1a2a;
+                color: #f0b429;
+                font-weight: 600;
+                padding: 10px 12px;
+                text-align: center;
+                border-bottom: 1px solid #2a2a2a;
+                white-space: nowrap;
+                cursor: pointer;
+                user-select: none;
+            }
+            th:hover {
+                color: #f5c84a;
+            }
+            th.sort-asc::after {
+                content: " ▲";
+                font-size: 9px;
+                opacity: 0.7;
+            }
+            th.sort-desc::after {
+                content: " ▼";
+                font-size: 9px;
+                opacity: 0.7;
+            }
+            td {
+                padding: 7px 12px;
+                text-align: center;
+                border-bottom: 1px solid #141414;
+                white-space: nowrap;
+            }
+            tr:hover td {
+                background: #1a1a2a;
+            }
+            .tl {
+                text-align: left;
+            }
+            .tr {
+                text-align: right;
+            }
+            .mono {
+                font-family: "Consolas", monospace;
+            }
+
+            /* Tags */
+            .tag {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            .tag-win {
+                background: #1a3a2a;
+                color: #2ecc71;
+            }
+            .tag-loss {
+                background: #3a1a1a;
+                color: #e74c3c;
+            }
+            .tag-trail {
+                background: #1a2a3a;
+                color: #3498db;
+            }
+            .tag-other {
+                background: #2a2a2a;
+                color: #aaa;
+            }
+
+            /* ── Pagination ── */
+            .pag-row {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 6px;
+                margin-top: 14px;
+                flex-wrap: wrap;
+            }
+            .pag-btn {
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                color: #666;
+                padding: 5px 11px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                font-family: "Consolas", monospace;
+                transition: all 0.12s;
+            }
+            .pag-btn:hover:not(:disabled) {
+                border-color: #f0b429;
+                color: #f0b429;
+            }
+            .pag-btn.cur {
+                background: #2a2a1a;
+                border-color: #f0b429;
+                color: #f0b429;
+            }
+            .pag-btn:disabled {
+                opacity: 0.35;
+                cursor: not-allowed;
+            }
+            .pag-dots {
+                color: #444;
+                font-size: 12px;
+            }
+            .pag-info {
+                font-size: 11px;
+                color: #444;
+                font-family: "Consolas", monospace;
+                text-align: center;
+                margin-top: 6px;
+            }
+
+            /* ── Table filter bar ── */
+            .filter-bar {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+            }
+            .filter-btn {
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                color: #666;
+                padding: 5px 14px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+                transition: all 0.12s;
+            }
+            .filter-btn:hover {
+                border-color: #f0b429;
+                color: #f0b429;
+            }
+            .filter-btn.f-all {
+                border-color: #f0b429;
+                color: #f0b429;
+                background: #2a2a1a;
+            }
+            .filter-btn.f-win {
+                border-color: #2ecc71;
+                color: #2ecc71;
+                background: #1a3a2a;
+            }
+            .filter-btn.f-loss {
+                border-color: #e74c3c;
+                color: #e74c3c;
+                background: #3a1a1a;
+            }
+            .filter-btn.f-trail {
+                border-color: #3498db;
+                color: #3498db;
+                background: #1a2a3a;
+            }
+
+            .table-search {
+                margin-left: auto;
+                background: #0d0d0d;
+                border: 1px solid #2a2a2a;
+                color: #f5f5f5;
+                padding: 5px 12px;
+                border-radius: 4px;
+                font-size: 12px;
+                outline: none;
+                width: 180px;
+                transition: border-color 0.12s;
+            }
+            .table-search:focus {
+                border-color: #f0b429;
+            }
+            .table-search::placeholder {
+                color: #3a3a3a;
+            }
+
+            /* ── Add buttons ── */
+            .add-btn {
+                background: #1a1a1a;
+                border: 1px solid #333;
+                color: #f0b429;
+                padding: 7px 13px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 700;
+                font-family: "Consolas", monospace;
+                white-space: nowrap;
+                transition: all 0.12s;
+            }
+            .add-btn:hover {
+                background: #2a2a1a;
+                border-color: #f0b429;
+            }
+            .add-btn:active {
+                transform: scale(0.96);
+            }
+            .add-btn-reset {
+                color: #888;
+                border-color: #2a2a2a;
+            }
+            .add-btn-reset:hover {
+                background: #1a1a1a;
+                border-color: #555;
+                color: #aaa;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <!-- ── Header ── -->
+            <div class="page-header">
+                <h1>Firewall Report</h1>
+                <span class="subtitle">백테스팅 결과 분석 대시보드</span>
+            </div>
+
+            <!-- ── Search Panel ── -->
+            <div class="search-panel">
+                <div class="search-row">
+                    <span class="search-label">투자원금</span>
+                    <input
+                        type="number"
+                        id="seedInput"
+                        class="seed-input"
+                        placeholder="거래당 투자금 (원)  예: 2000000"
+                        min="1"
+                        step="1"
+                    />
+                    <span
+                        id="seedFmt"
+                        style="font-size:13px;color:#f0b429;font-family:'Consolas',monospace;white-space:nowrap;"
+                    ></span>
+                    <button class="add-btn" onclick="addSeed(100000)">
+                        +10만
+                    </button>
+                    <button class="add-btn" onclick="addSeed(1000000)">
+                        +100만
+                    </button>
+                    <button class="add-btn" onclick="addSeed(10000000)">
+                        +1000만
+                    </button>
+                    <button class="add-btn add-btn-reset" onclick="resetSeed()">
+                        초기화
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: #555; margin-top: 10px">
+                    투자원금 입력 후 아래 연도를 선택하세요.
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+                    <div id="yearBar" class="year-bar" style="margin-top:0;"></div>
+                    <button class="add-btn add-btn-reset" onclick="resetYears()" title="연도 선택 초기화">↺ 초기화</button>
+                </div>
+                <div id="statusBar" class="status-bar"></div>
+            </div>
+
+            <!-- ── Dashboard ── -->
+            <div id="dashboard" class="hidden">
+                <!-- dash header -->
+                <div class="dash-header">
+                    <div class="dash-title-row">
+                        <span id="dashTitle" class="dash-title"></span>
+                        <span id="dashYear" class="year-badge"></span>
+                    </div>
+                    <span id="dashMeta" class="dash-meta"></span>
+                </div>
+                <div
+                    id="dashCapital"
+                    style="
+                        margin-bottom: 18px;
+                        font-size: 12px;
+                        color: #555;
+                        font-family: &quot;Consolas&quot;, monospace;
+                    "
+                ></div>
+
+                <!-- KPI -->
+                <div class="section">
+                    <div class="kpi-grid" id="kpiGrid"></div>
+                </div>
+
+                <!-- Equity Curve -->
+                <div class="section">
+                    <div class="chart-card">
+                        <div class="chart-label">누적 손익 추이 (₩)</div>
+                        <canvas id="equityChart" height="65"></canvas>
+                    </div>
+                </div>
+
+                <!-- Monthly + Distribution -->
+                <div class="section charts-row">
+                    <div class="chart-card">
+                        <div class="chart-label">월별 손익 (₩)</div>
+                        <canvas id="monthlyChart" height="120"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-label">매도 유형 분포</div>
+                        <canvas id="distChart" height="120"></canvas>
+                    </div>
+                </div>
+
+                <!-- Trade Table -->
+                <div class="section">
+                    <div class="section-title">거래 내역</div>
+                    <div class="filter-bar">
+                        <button
+                            class="filter-btn f-all"
+                            data-filter="all"
+                            onclick="setFilter('all')"
+                        >
+                            전체
+                        </button>
+                        <button
+                            class="filter-btn"
+                            data-filter="win"
+                            onclick="setFilter('win')"
+                        >
+                            익절만
+                        </button>
+                        <button
+                            class="filter-btn"
+                            data-filter="loss"
+                            onclick="setFilter('loss')"
+                        >
+                            손절만
+                        </button>
+                        <button
+                            class="filter-btn"
+                            data-filter="trail"
+                            onclick="setFilter('trail')"
+                        >
+                            트레일링만
+                        </button>
+                        <input
+                            id="tableSearch"
+                            class="table-search"
+                            placeholder="종목명 / 코드 검색"
+                            oninput="onSearch()"
+                        />
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr id="tableHead">
+                                    <th
+                                        data-col="ticker"
+                                        onclick="sortBy('ticker')"
+                                    >
+                                        코드
+                                    </th>
+                                    <th
+                                        data-col="ticker_name"
+                                        onclick="sortBy('ticker_name')"
+                                        class="tl"
+                                    >
+                                        종목명
+                                    </th>
+                                    <th
+                                        data-col="buy_date"
+                                        onclick="sortBy('buy_date')"
+                                    >
+                                        매수일
+                                    </th>
+                                    <th
+                                        data-col="buy_price"
+                                        onclick="sortBy('buy_price')"
+                                    >
+                                        매수가
+                                    </th>
+                                    <th
+                                        data-col="sell_date"
+                                        onclick="sortBy('sell_date')"
+                                    >
+                                        매도일
+                                    </th>
+                                    <th
+                                        data-col="sell_price"
+                                        onclick="sortBy('sell_price')"
+                                    >
+                                        매도가
+                                    </th>
+                                    <th
+                                        data-col="sell_type"
+                                        onclick="sortBy('sell_type')"
+                                    >
+                                        매도유형
+                                    </th>
+                                    <th data-col="per_trade" onclick="sortBy('per_trade')">
+                                        종목당 매수금
+                                    </th>
+                                    <th data-col="pnl" onclick="sortBy('actual_pnl')">
+                                        손익 (₩)
+                                    </th>
+                                    <th data-col="rtn" onclick="sortBy('rtn')">
+                                        수익률
+                                    </th>
+                                    <th
+                                        data-col="score"
+                                        onclick="sortBy('score')"
+                                    >
+                                        스코어
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="tradeBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pag-row" id="pagRow"></div>
+                    <div class="pag-info" id="pagInfo"></div>
+                </div>
+            </div>
+            <!-- /dashboard -->
+        </div>
+        <!-- /container -->
+
+        <script>
+            /* ═══════════════════════════════════════════════════
+   State
+═══════════════════════════════════════════════════ */
+            let allData = []; // enriched (actual_pnl 포함)
+            let filteredData = [];
+            let currentSort = { col: "sell_date", dir: "desc" };
+            let currentFilter = "all";
+            let currentSearch = "";
+            let currentPage = 1;
+            const PAGE_SIZE = 100;
+            const charts = {};
+            let currentCapital = 0; // 사용자 입력 투자원금 (원)
+
+            /* ═══════════════════════════════════════════════════
+   Formatters
+═══════════════════════════════════════════════════ */
+            const comma = (v) => Math.round(v).toLocaleString("ko-KR");
+            const fmtPnl = (v) => (v >= 0 ? "+" : "") + comma(v);
+            const fmtRtn = (v) => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
+            const fmtPrc = (v) => v.toLocaleString("ko-KR");
+            const pcls = (v) => (v > 0 ? "pos" : v < 0 ? "neg" : "muted");
+
+            function sellTag(type) {
+                if (type === "익절")
+                    return `<span class="tag tag-win">${type}</span>`;
+                if (type.includes("손절"))
+                    return `<span class="tag tag-loss">${type}</span>`;
+                if (type === "트레일링")
+                    return `<span class="tag tag-trail">${type}</span>`;
+                return `<span class="tag tag-other">${type}</span>`;
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Manifest  { "연도": "폴더경로", ... }
+═══════════════════════════════════════════════════ */
+            let MANIFEST = {}; // e.g. { "2020": "firewall_2020" }
+
+            (async () => {
+                try {
+                    const r = await fetch(`manifest.json?t=${Date.now()}`, { cache: "no-store" });
+                    if (r.ok) {
+                        MANIFEST = await r.json();
+                        renderYearBar(); // manifest 로드 완료 후 연도 탭 렌더
+                    }
+                } catch (_) {}
+            })();
+
+            /* ═══════════════════════════════════════════════════
+   Data loading  (연도 → 폴더 경로 사용)
+═══════════════════════════════════════════════════ */
+            async function loadData(year) {
+                const folder = MANIFEST[year];
+                if (!folder)
+                    throw new Error(
+                        `manifest.json에 ${year}년 경로가 없습니다.`,
+                    );
+                const r = await fetch(`${folder}/firewall_result.json`);
+                if (!r.ok)
+                    throw new Error(
+                        `파일 없음: ${folder}/firewall_result.json`,
+                    );
+                // NaN 은 유효한 JSON이 아니므로 null 로 치환 후 파싱
+                const text = await r.text();
+                return JSON.parse(text.replace(/:\s*NaN/g, ": null"));
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Enrich  — 복리 계산
+   매거래 투자금 = (초기자금 + 누적손익) / 10
+   actual_pnl   = 매거래투자금 × rtn / 100
+═══════════════════════════════════════════════════ */
+            function enrichData(raw, capital) {
+                const sorted = [...raw].sort((a, b) =>
+                    a.buy_date.localeCompare(b.buy_date),
+                );
+                let cumPnl = 0;
+                return sorted.map((t) => {
+                    const perTrade = Math.max(0, (capital + cumPnl) / 10);
+                    const actual_pnl = Math.round((perTrade * t.rtn) / 100);
+                    cumPnl += actual_pnl;
+                    return { ...t, actual_pnl, per_trade: Math.round(perTrade) };
+                });
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Statistics  — actual_pnl(₩) + rtn(%) 혼합
+═══════════════════════════════════════════════════ */
+            function computeStats(data, capital) {
+                const n = data.length;
+                if (!n) return null;
+
+                const wins = data.filter((t) => t.rtn > 0);
+                const losses = data.filter((t) => t.rtn <= 0);
+
+                // ₩ 기반 (actual_pnl = capital × rtn/100)
+                const totalPnl = data.reduce((s, t) => s + t.actual_pnl, 0);
+                const sumWinPnl = wins.reduce((s, t) => s + t.actual_pnl, 0);
+                const sumLossPnl = losses.reduce(
+                    (s, t) => s + Math.abs(t.actual_pnl),
+                    0,
+                );
+                const maxPnl = Math.max(...data.map((t) => t.actual_pnl));
+                const minPnl = Math.min(...data.map((t) => t.actual_pnl));
+                const avgWinPnl = wins.length ? sumWinPnl / wins.length : 0;
+                const avgLossPnl = losses.length
+                    ? sumLossPnl / losses.length
+                    : 0;
+
+                // % 기반
+                const totalRtn = data.reduce((s, t) => s + t.rtn, 0);
+                const maxRtn = Math.max(...data.map((t) => t.rtn));
+                const minRtn = Math.min(...data.map((t) => t.rtn));
+                const avgRtn = totalRtn / n;
+                const sumWinRtn = wins.reduce((s, t) => s + t.rtn, 0);
+                const sumLossRtn = losses.reduce(
+                    (s, t) => s + Math.abs(t.rtn),
+                    0,
+                );
+                const avgWinRtn = wins.length ? sumWinRtn / wins.length : 0;
+                const avgLossRtn = losses.length
+                    ? sumLossRtn / losses.length
+                    : 0;
+                const pf = avgLossPnl ? avgWinPnl / avgLossPnl : null;
+
+                const winRate = (wins.length / n) * 100;
+
+                const sellTypes = {};
+                data.forEach((t) => {
+                    sellTypes[t.sell_type] = (sellTypes[t.sell_type] || 0) + 1;
+                });
+
+                return {
+                    n,
+                    wins: wins.length,
+                    losses: losses.length,
+                    capital,
+                    totalPnl,
+                    sumWinPnl,
+                    sumLossPnl,
+                    maxPnl,
+                    minPnl,
+                    avgWinPnl,
+                    avgLossPnl,
+                    totalRtn,
+                    maxRtn,
+                    minRtn,
+                    avgRtn,
+                    avgWinRtn,
+                    avgLossRtn,
+                    winRate,
+                    pf,
+                    sellTypes,
+                };
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Chart data builders  (actual_pnl ₩ 기반)
+═══════════════════════════════════════════════════ */
+            function buildEquity(data) {
+                // 매도일 기준 일별 actual_pnl 합산 → 누적
+                const daily = {};
+                data.forEach((t) => {
+                    daily[t.sell_date] =
+                        (daily[t.sell_date] || 0) + t.actual_pnl;
+                });
+                const dates = Object.keys(daily).sort();
+                let cum = 0;
+                const values = dates.map((d) => {
+                    cum += daily[d];
+                    return cum;
+                });
+                return { dates, values };
+            }
+
+            function buildMonthly(data) {
+                const mo = {};
+                data.forEach((t) => {
+                    const m = t.sell_date.slice(0, 7);
+                    mo[m] = (mo[m] || 0) + t.actual_pnl;
+                });
+                const months = Object.keys(mo).sort();
+                return { months, values: months.map((m) => mo[m]) };
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Render KPIs
+═══════════════════════════════════════════════════ */
+            function renderKPIs(s) {
+                const pfStr = s.pf != null ? s.pf.toFixed(2) : "∞";
+                const kpis = [
+                    {
+                        label: "총 거래수",
+                        value: comma(s.n) + "건",
+                        sub: `익절 ${s.wins}건 / 손절 ${s.losses}건`,
+                        vcls: "neu",
+                        top: "top-yellow",
+                    },
+                    {
+                        label: "승률 (Win Rate)",
+                        value: s.winRate.toFixed(1) + "%",
+                        sub: `수익거래 ${s.wins}건`,
+                        vcls: s.winRate >= 50 ? "pos" : "neg",
+                        top: s.winRate >= 50 ? "top-green" : "top-red",
+                    },
+                    {
+                        label: "총 손익",
+                        value: fmtPnl(s.totalPnl) + "원",
+                        sub: fmtRtn(s.totalRtn) + " (수익률 합계)",
+                        vcls: pcls(s.totalPnl),
+                        top: s.totalPnl >= 0 ? "top-green" : "top-red",
+                    },
+                    {
+                        label: "손익비 (Profit Factor)",
+                        value: pfStr,
+                        sub: `평균수익 ${fmtPnl(s.avgWinPnl)}원 / 평균손실 ${fmtPnl(-s.avgLossPnl)}원`,
+                        vcls: s.pf == null || s.pf >= 1 ? "pos" : "neg",
+                        top:
+                            s.pf == null || s.pf >= 1 ? "top-green" : "top-red",
+                    },
+                    {
+                        label: "평균 손익 / 거래",
+                        value: fmtPnl(s.totalPnl / s.n) + "원",
+                        sub: fmtRtn(s.avgRtn) + " / 거래",
+                        vcls: pcls(s.totalPnl / s.n),
+                        top: "top-blue",
+                    },
+                    {
+                        label: "총 수익 합계",
+                        value: fmtPnl(s.sumWinPnl) + "원",
+                        sub: `${s.wins}건 평균 +${comma(s.avgWinPnl)}원 (${fmtRtn(s.avgWinRtn)})`,
+                        vcls: "pos",
+                        top: "top-teal",
+                    },
+                    {
+                        label: "최대 수익 (단일)",
+                        value: fmtPnl(s.maxPnl) + "원",
+                        sub: fmtRtn(s.maxRtn),
+                        vcls: "pos",
+                        top: "top-green",
+                    },
+                    {
+                        label: "최대 손실 (단일)",
+                        value: fmtPnl(s.minPnl) + "원",
+                        sub: fmtRtn(s.minRtn),
+                        vcls: "neg",
+                        top: "top-red",
+                    },
+                ];
+
+                document.getElementById("kpiGrid").innerHTML = kpis
+                    .map(
+                        (k) => `
+    <div class="kpi-card ${k.top}">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value ${k.vcls}">${k.value}</div>
+      <div class="kpi-sub">${k.sub}</div>
+    </div>
+  `,
+                    )
+                    .join("");
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Render Charts
+═══════════════════════════════════════════════════ */
+            const CHART_DEFAULTS = {
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: "#1e1e2e",
+                        borderColor: "#2a2a3a",
+                        borderWidth: 1,
+                        titleColor: "#888",
+                        bodyColor: "#f5f5f5",
+                    },
+                },
+                scales: {
+                    x: { grid: { color: "#181818" }, ticks: { color: "#444" } },
+                    y: { grid: { color: "#181818" }, ticks: { color: "#444" } },
+                },
+            };
+
+            function yTickFmt(v) {
+                const a = Math.abs(v);
+                if (a >= 100_000_000)
+                    return (v / 100_000_000).toFixed(1) + "억";
+                if (a >= 10_000_000)
+                    return (v / 10_000_000).toFixed(1) + "천만";
+                if (a >= 1_000_000) return (v / 1_000_000).toFixed(1) + "백만";
+                if (a >= 10_000) return (v / 10_000).toFixed(0) + "만";
+                return v.toLocaleString("ko-KR");
+            }
+
+            function renderEquityChart(eq) {
+                if (charts.equity) charts.equity.destroy();
+                const last = eq.values[eq.values.length - 1] ?? 0;
+                const col = last >= 0 ? "#2ecc71" : "#e74c3c";
+                const fill =
+                    last >= 0
+                        ? "rgba(46,204,113,0.07)"
+                        : "rgba(231,76,60,0.07)";
+
+                charts.equity = new Chart(
+                    document.getElementById("equityChart").getContext("2d"),
+                    {
+                        type: "line",
+                        data: {
+                            labels: eq.dates,
+                            datasets: [
+                                {
+                                    data: eq.values,
+                                    borderColor: col,
+                                    backgroundColor: fill,
+                                    borderWidth: 1.5,
+                                    fill: true,
+                                    tension: 0.15,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 4,
+                                    pointHoverBackgroundColor: col,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            interaction: { mode: "index", intersect: false },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: "#1e1e2e",
+                                    borderColor: "#2a2a3a",
+                                    borderWidth: 1,
+                                    titleColor: "#888",
+                                    bodyColor: "#f5f5f5",
+                                    callbacks: {
+                                        label: (ctx) =>
+                                            "누적 손익: " +
+                                            fmtPnl(ctx.raw) +
+                                            "원",
+                                    },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: "#181818" },
+                                    ticks: {
+                                        color: "#444",
+                                        maxTicksLimit: 14,
+                                        maxRotation: 0,
+                                    },
+                                },
+                                y: {
+                                    grid: { color: "#181818" },
+                                    ticks: {
+                                        color: "#444",
+                                        callback: yTickFmt,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                );
+            }
+
+            function renderMonthlyChart(mo) {
+                if (charts.monthly) charts.monthly.destroy();
+                const bgs = mo.values.map((v) =>
+                    v >= 0 ? "rgba(46,204,113,0.65)" : "rgba(231,76,60,0.65)",
+                );
+                const bord = mo.values.map((v) =>
+                    v >= 0 ? "#2ecc71" : "#e74c3c",
+                );
+
+                charts.monthly = new Chart(
+                    document.getElementById("monthlyChart").getContext("2d"),
+                    {
+                        type: "bar",
+                        data: {
+                            labels: mo.months,
+                            datasets: [
+                                {
+                                    data: mo.values,
+                                    backgroundColor: bgs,
+                                    borderColor: bord,
+                                    borderWidth: 1,
+                                    borderRadius: 3,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: "#1e1e2e",
+                                    borderColor: "#2a2a3a",
+                                    borderWidth: 1,
+                                    titleColor: "#888",
+                                    bodyColor: "#f5f5f5",
+                                    callbacks: {
+                                        label: (ctx) =>
+                                            "월 손익: " +
+                                            fmtPnl(ctx.raw) +
+                                            "원",
+                                    },
+                                },
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: "#181818" },
+                                    ticks: { color: "#444", maxRotation: 45 },
+                                },
+                                y: {
+                                    grid: { color: "#181818" },
+                                    ticks: {
+                                        color: "#444",
+                                        callback: yTickFmt,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                );
+            }
+
+            function renderDistChart(sellTypes) {
+                if (charts.dist) charts.dist.destroy();
+                const labels = Object.keys(sellTypes);
+                const values = labels.map((l) => sellTypes[l]);
+                const COLOR_MAP = {
+                    익절: "#2ecc71",
+                    "1차손절": "#e74c3c",
+                    트레일링: "#3498db",
+                };
+                const colors = labels.map((l) => COLOR_MAP[l] ?? "#888");
+                const total = values.reduce((a, b) => a + b, 0);
+
+                charts.dist = new Chart(
+                    document.getElementById("distChart").getContext("2d"),
+                    {
+                        type: "doughnut",
+                        data: {
+                            labels,
+                            datasets: [
+                                {
+                                    data: values,
+                                    backgroundColor: colors.map(
+                                        (c) => c + "bb",
+                                    ),
+                                    borderColor: colors,
+                                    borderWidth: 2,
+                                },
+                            ],
+                        },
+                        options: {
+                            responsive: true,
+                            cutout: "58%",
+                            plugins: {
+                                legend: {
+                                    position: "bottom",
+                                    labels: {
+                                        color: "#888",
+                                        font: { size: 12 },
+                                        padding: 14,
+                                    },
+                                },
+                                tooltip: {
+                                    backgroundColor: "#1e1e2e",
+                                    borderColor: "#2a2a3a",
+                                    borderWidth: 1,
+                                    titleColor: "#888",
+                                    bodyColor: "#f5f5f5",
+                                    callbacks: {
+                                        label: (ctx) =>
+                                            `${ctx.label}: ${ctx.raw}건 (${((ctx.raw / total) * 100).toFixed(1)}%)`,
+                                    },
+                                },
+                            },
+                        },
+                    },
+                );
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Table
+═══════════════════════════════════════════════════ */
+            function applyFilterSearch() {
+                const q = currentSearch.trim().toLowerCase();
+                filteredData = allData.filter((t) => {
+                    if (currentFilter === "win" && t.rtn <= 0) return false;
+                    if (currentFilter === "loss" && t.rtn > 0) return false;
+                    if (currentFilter === "trail" && t.sell_type !== "트레일링")
+                        return false;
+                    if (q) {
+                        const hay = (t.ticker_name + t.ticker).toLowerCase();
+                        if (!hay.includes(q)) return false;
+                    }
+                    return true;
+                });
+                currentPage = 1;
+                renderTable();
+            }
+
+            window.setFilter = function (f) {
+                currentFilter = f;
+                document.querySelectorAll(".filter-btn").forEach((b) => {
+                    b.className = "filter-btn";
+                    if (b.dataset.filter === f) {
+                        if (f === "all") b.classList.add("f-all");
+                        if (f === "win") b.classList.add("f-win");
+                        if (f === "loss") b.classList.add("f-loss");
+                        if (f === "trail") b.classList.add("f-trail");
+                    }
+                });
+                applyFilterSearch();
+            };
+
+            window.onSearch = function () {
+                currentSearch = document.getElementById("tableSearch").value;
+                applyFilterSearch();
+            };
+
+            function sortBy(col) {
+                if (currentSort.col === col) {
+                    currentSort.dir =
+                        currentSort.dir === "asc" ? "desc" : "asc";
+                } else {
+                    currentSort.col = col;
+                    currentSort.dir = col === "sell_date" ? "desc" : "desc";
+                }
+                // Update header indicators
+                document.querySelectorAll("#tableHead th").forEach((th) => {
+                    th.classList.remove("sort-asc", "sort-desc");
+                    if (th.dataset.col === col) {
+                        th.classList.add(
+                            currentSort.dir === "asc"
+                                ? "sort-asc"
+                                : "sort-desc",
+                        );
+                    }
+                });
+                currentPage = 1;
+                renderTable();
+            }
+            window.sortBy = sortBy;
+
+            function getSorted() {
+                const { col, dir } = currentSort;
+                return [...filteredData].sort((a, b) => {
+                    let va = a[col],
+                        vb = b[col];
+                    if (typeof va === "string") {
+                        va = va.toLowerCase();
+                        vb = vb.toLowerCase();
+                    }
+                    if (va < vb) return dir === "asc" ? -1 : 1;
+                    if (va > vb) return dir === "asc" ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            function renderTable() {
+                const sorted = getSorted();
+                const total = sorted.length;
+                const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+                const page = Math.min(currentPage, pages);
+                const start = (page - 1) * PAGE_SIZE;
+                const end = Math.min(start + PAGE_SIZE, total);
+                const rows = sorted.slice(start, end);
+
+                document.getElementById("tradeBody").innerHTML =
+                    rows
+                        .map(
+                            (t) => `
+    <tr>
+      <td class="mono muted">${t.ticker}</td>
+      <td class="tl">${t.ticker_name}</td>
+      <td class="mono">${t.buy_date}</td>
+      <td class="mono tr">${fmtPrc(t.buy_price)}</td>
+      <td class="mono">${t.sell_date}</td>
+      <td class="mono tr">${fmtPrc(t.sell_price)}</td>
+      <td>${sellTag(t.sell_type)}</td>
+      <td class="mono tr muted">${fmtPrc(t.per_trade)}</td>
+      <td class="mono tr ${pcls(t.actual_pnl)}">${fmtPnl(t.actual_pnl)}</td>
+      <td class="mono ${pcls(t.rtn)}">${fmtRtn(t.rtn)}</td>
+      <td class="mono muted">${t.score != null ? t.score.toFixed(1) : "-"}</td>
+    </tr>
+  `,
+                        )
+                        .join("") ||
+                    `<tr><td colspan="11" style="padding:40px;color:#444;text-align:center;">데이터 없음</td></tr>`;
+
+                document.getElementById("pagInfo").textContent = total
+                    ? `${start + 1}–${end} / 총 ${total.toLocaleString()}건`
+                    : "";
+
+                // Pagination
+                const pagRow = document.getElementById("pagRow");
+                if (pages <= 1) {
+                    pagRow.innerHTML = "";
+                    return;
+                }
+
+                let html = `<button class="pag-btn" onclick="goPage(${page - 1})" ${page <= 1 ? "disabled" : ""}>◀</button>`;
+
+                const lo = Math.max(1, page - 2);
+                const hi = Math.min(pages, page + 2);
+
+                if (lo > 1) {
+                    html += `<button class="pag-btn" onclick="goPage(1)">1</button>`;
+                    if (lo > 2) html += `<span class="pag-dots">…</span>`;
+                }
+                for (let p = lo; p <= hi; p++) {
+                    html += `<button class="pag-btn${p === page ? " cur" : ""}" onclick="goPage(${p})">${p}</button>`;
+                }
+                if (hi < pages) {
+                    if (hi < pages - 1)
+                        html += `<span class="pag-dots">…</span>`;
+                    html += `<button class="pag-btn" onclick="goPage(${pages})">${pages}</button>`;
+                }
+                html += `<button class="pag-btn" onclick="goPage(${page + 1})" ${page >= pages ? "disabled" : ""}>▶</button>`;
+
+                pagRow.innerHTML = html;
+            }
+
+            window.goPage = function (p) {
+                currentPage = p;
+                renderTable();
+                document.querySelector(".table-wrap").scrollTop = 0;
+            };
+
+            /* ═══════════════════════════════════════════════════
+   Render Dashboard
+═══════════════════════════════════════════════════ */
+            function renderDashboard(enriched, capital, year) {
+                allData = enriched;
+                currentCapital = capital;
+                currentFilter = "all";
+                currentSearch = "";
+                currentSort = { col: "sell_date", dir: "desc" };
+                filteredData = [...enriched];
+
+                // Header
+                document.getElementById("dashTitle").textContent =
+                    `투자원금 ${comma(capital)}원`;
+                document.getElementById("dashYear").textContent = year;
+                document.getElementById("dashCapital").textContent =
+                    `거래당 초기 ${comma(Math.round(capital / 10))}원 투자 · 복리 계산 · 총 ${enriched.length.toLocaleString()}건`;
+
+                const first = enriched[0]?.buy_date ?? "";
+                const last =
+                    [...enriched].sort((a, b) =>
+                        b.sell_date.localeCompare(a.sell_date),
+                    )[0]?.sell_date ?? "";
+                document.getElementById("dashMeta").textContent = first
+                    ? `${first} ~ ${last}`
+                    : "";
+
+                // Reset UI
+                document.querySelectorAll(".filter-btn").forEach((b) => {
+                    b.className =
+                        "filter-btn" +
+                        (b.dataset.filter === "all" ? " f-all" : "");
+                });
+                document.getElementById("tableSearch").value = "";
+                document.querySelectorAll("#tableHead th").forEach((th) => {
+                    th.classList.remove("sort-asc", "sort-desc");
+                    if (th.dataset.col === "sell_date")
+                        th.classList.add("sort-desc");
+                });
+
+                const stats = computeStats(enriched, capital);
+                renderKPIs(stats);
+                renderEquityChart(buildEquity(enriched));
+                renderMonthlyChart(buildMonthly(enriched));
+                renderDistChart(stats.sellTypes);
+                renderTable();
+
+                document.getElementById("dashboard").classList.remove("hidden");
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Year Tabs — 연속 범위 멀티 선택
+═══════════════════════════════════════════════════ */
+            let selectedYears = []; // 정렬된 숫자 배열
+            let isLoading = false;
+
+            function renderYearBar() {
+                const years = Object.keys(MANIFEST).sort();
+                const bar = document.getElementById("yearBar");
+                bar.innerHTML = years
+                    .map((y) => `<button class="year-tab" data-year="${y}" onclick="selectYear('${y}')">${y}</button>`)
+                    .join("");
+                updateYearTabStyles();
+            }
+
+            function updateYearTabStyles() {
+                const allYears = Object.keys(MANIFEST).map(Number).sort((a, b) => a - b);
+                const selSet  = new Set(selectedYears);
+                const maxSel  = selectedYears.length ? Math.max(...selectedYears) : null;
+                const minSel  = selectedYears.length ? Math.min(...selectedYears) : null;
+
+                document.querySelectorAll(".year-tab").forEach((btn) => {
+                    const y = Number(btn.dataset.year);
+                    btn.classList.remove("active", "unavailable", "range-edge");
+
+                    if (selSet.has(y)) {
+                        btn.classList.add("active");
+                        // 선택 범위의 마지막 연도 표시 (클릭 해제 가능 힌트)
+                        if (y === maxSel) btn.classList.add("range-edge");
+                    } else {
+                        // 선택 가능: 선택된 게 없거나, maxSel+1 이거나 minSel-1
+                        const canAdd = selectedYears.length === 0
+                            || y === maxSel + 1
+                            || y === minSel - 1;
+                        if (!canAdd) btn.classList.add("unavailable");
+                    }
+                });
+            }
+
+            window.selectYear = async function (yearStr) {
+                if (isLoading) return;
+
+                const capital = parseInt(document.getElementById("seedInput").value, 10);
+                if (!capital || capital <= 0) {
+                    setStatus("err", "투자원금을 먼저 입력하세요.");
+                    return;
+                }
+
+                const y = Number(yearStr);
+
+                if (selectedYears.includes(y)) {
+                    // 이미 선택된 연도 클릭 → 해당 연도 이후(포함) 모두 해제
+                    selectedYears = selectedYears.filter((s) => s < y);
+                    updateYearTabStyles();
+                    if (selectedYears.length === 0) {
+                        document.getElementById("dashboard").classList.add("hidden");
+                        setStatus("", "연도를 선택하세요.");
+                        return;
+                    }
+                } else {
+                    // 연속 범위 체크
+                    if (selectedYears.length > 0) {
+                        const maxSel = Math.max(...selectedYears);
+                        const minSel = Math.min(...selectedYears);
+                        if (y !== maxSel + 1 && y !== minSel - 1) return; // 비연속 → 무시
+                    }
+                    selectedYears = [...selectedYears, y].sort((a, b) => a - b);
+                    updateYearTabStyles();
+                }
+
+                // 선택된 연도 데이터 순서대로 로드 + 합산
+                isLoading = true;
+                const label = selectedYears.length > 1
+                    ? `${selectedYears[0]} ~ ${selectedYears[selectedYears.length - 1]}년`
+                    : `${selectedYears[0]}년`;
+                setStatus("loading", `${label} 데이터 로딩 중…`);
+
+                try {
+                    const combined = [];
+                    for (const yr of selectedYears) {
+                        const raw = await loadData(String(yr));
+                        combined.push(...raw);
+                    }
+                    // 전체 매수일 기준 정렬 (연도 경계 없이 이어서 계산)
+                    combined.sort((a, b) => a.buy_date.localeCompare(b.buy_date));
+                    const enriched = enrichData(combined, capital);
+                    renderDashboard(enriched, capital, label);
+                    setStatus("ok", `✓ ${combined.length.toLocaleString()}건 · ${label} · 투자원금 ${comma(capital)}원 복리 계산`);
+                } catch (e) {
+                    setStatus("err", e.message);
+                    document.getElementById("dashboard").classList.add("hidden");
+                } finally {
+                    isLoading = false;
+                }
+            };
+
+            /* ═══════════════════════════════════════════════════
+   Status
+═══════════════════════════════════════════════════ */
+            function setStatus(type, msg) {
+                const el = document.getElementById("statusBar");
+                el.className =
+                    "status-bar" +
+                    (type === "ok" ? " ok" : type === "err" ? " err" : "");
+                el.innerHTML =
+                    type === "loading"
+                        ? `<span class="spinner"></span>${msg}`
+                        : msg;
+            }
+
+            /* ═══════════════════════════════════════════════════
+   Seed input — 실시간 포맷 힌트
+═══════════════════════════════════════════════════ */
+            function updateSeedFmt() {
+                const v = parseInt(
+                    document.getElementById("seedInput").value,
+                    10,
+                );
+                const el = document.getElementById("seedFmt");
+                if (!v || v <= 0) {
+                    el.textContent = "";
+                    return;
+                }
+                const eok =
+                    v >= 100_000_000
+                        ? (v / 100_000_000).toFixed(2) + "억원"
+                        : "";
+                const man = v >= 10_000 ? Math.floor(v / 10_000) + "만원" : "";
+                el.textContent =
+                    "= " + (eok || man || v.toLocaleString("ko-KR") + "원");
+            }
+
+            window.addSeed = function (amount) {
+                const input = document.getElementById("seedInput");
+                input.value = Math.max(
+                    0,
+                    (parseInt(input.value, 10) || 0) + amount,
+                );
+                updateSeedFmt();
+            };
+
+            window.resetYears = function () {
+                selectedYears = [];
+                updateYearTabStyles();
+                document.getElementById("dashboard").classList.add("hidden");
+                setStatus("", "연도를 선택하세요.");
+            };
+
+            window.resetSeed = function () {
+                document.getElementById("seedInput").value = "";
+                document.getElementById("seedFmt").textContent = "";
+            };
+
+            document
+                .getElementById("seedInput")
+                .addEventListener("input", updateSeedFmt);
+        </script>
+    </body>
+</html>
