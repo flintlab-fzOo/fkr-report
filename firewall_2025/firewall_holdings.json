@@ -1,0 +1,68 @@
+{
+  "232680": {
+    "ticker_name": "라온테크",
+    "buy_price": 13940.0,
+    "buy_size": 383,
+    "buy_date": "2025-12-29",
+    "signal_date": "2025-12-29",
+    "phase": 2,
+    "stop_loss": 14550.0,
+    "theme": "제약/바이오,로봇,OLED 장비,반도체 장비,스마트팩토리(스마트공장),로봇 - 산업",
+    "score": 87.8,
+    "peak_price": 14550.0,
+    "current_price": 14550.0,
+    "unrealized_pnl": 233630,
+    "unrealized_rtn": 4.38
+  },
+  "049070": {
+    "ticker_name": "인탑스",
+    "buy_price": 19820.0,
+    "buy_size": 270,
+    "buy_date": "2025-12-29",
+    "signal_date": "2025-12-29",
+    "phase": 2,
+    "stop_loss": 20050.0,
+    "theme": "로봇,코로나 치료제,자동차 부품,스마트폰,갤럭시,로봇 - 가정",
+    "score": 87.1,
+    "peak_price": 20050.0,
+    "current_price": 20050.0,
+    "unrealized_pnl": 62100,
+    "unrealized_rtn": 1.16
+  },
+  "452160": {
+    "ticker_name": "제이엔비",
+    "buy_price": 7070.0,
+    "buy_size": 764,
+    "buy_date": "2025-12-30",
+    "signal_date": "2025-12-30",
+    "phase": 1,
+    "stop_loss": 0,
+    "theme": "반도체 장비,AI반도체",
+    "score": 85.0,
+    "peak_price": 7070.0
+  },
+  "139670": {
+    "ticker_name": "키네마스터",
+    "buy_price": 2600.0,
+    "buy_size": 2078,
+    "buy_date": "2025-12-30",
+    "signal_date": "2025-12-30",
+    "phase": 1,
+    "stop_loss": 0,
+    "theme": "메타버스,AI(인공지능),메타버스 - 콘텐츠,토스",
+    "score": 82.7,
+    "peak_price": 2600.0
+  },
+  "080220": {
+    "ticker_name": "제주반도체",
+    "buy_price": 26350.0,
+    "buy_size": 205,
+    "buy_date": "2025-12-30",
+    "signal_date": "2025-12-30",
+    "phase": 1,
+    "stop_loss": 0,
+    "theme": "스마트폰,반도체설계,코로나19 - 화이자,반도체생산,원희룡,복권",
+    "score": 71.6,
+    "peak_price": 26350.0
+  }
+}
